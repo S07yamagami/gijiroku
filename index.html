@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase_version9_RealtimeDB(議事録アプリ)</title>
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <h1>議事録</h1>
+
+    <div>
+        <div>
+            <input type="text" id="speaker" placeholder="発言者">
+        </div>
+        <div>
+            <input type="text" id="uname" placeholder="発言内容">
+        </div>
+        <button id="send">送信</button>
+        <button id="delete">全削除</button>
+
+        <div id="output"
+            style="border: 1px solid #ccc; padding: 10px; margin-top: 20px; overflow: auto; height: 300px;">
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
+        import { getDatabase, ref, push, set, onChildAdded, remove, child } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-database.js";
+
+        const firebaseConfig = {
+            
+            authDomain: "dev28-b6e00.firebaseapp.com",
+            projectId: "dev28-b6e00",
+            storageBucket: "dev28-b6e00.firebasestorage.app",
+            messagingSenderId: "8167220324",
+            appId: "1:8167220324:web:a50a50b01fc465f4c7ab71"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db, "minutes");
+
+        window.onload = function () {
+            remove(dbRef).then(() => {
+                console.log("過去のデータを削除しました。");
+            }).catch((error) => {
+                console.error("データ削除に失敗しました:", error);
+            });
+        };
+
+        $("#send").on("click", function () {
+            const speaker = $("#speaker").val();
+            const uname = $("#uname").val();
+            const timestamp = new Date().toLocaleString();
+
+            if (speaker && uname) {
+                const msg = {
+                    speaker: speaker,
+                    uname: uname,
+                    timestamp: timestamp
+                };
+                const newPostRef = push(dbRef);
+                set(newPostRef, msg);
+
+                $("#speaker").val("");
+                $("#uname").val("");
+            } else {
+                alert("発言者と発言内容を入力してください！");
+            }
+        });
+
+    
+        onChildAdded(dbRef, function (data) {
+            const msg = data.val();
+            const key = data.key; 
+            const h = `
+                <div class="message" data-key="${key}" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p><strong>${msg.speaker}</strong>: ${msg.uname}</p>
+                        <p style="font-size: 0.8em; color: gray;">${msg.timestamp}</p>
+                    </div>
+                    <button class="delete-msg" style="font-size: 12px; padding: 5px; border: none; background: #f44336; color: white; border-radius: 5px; cursor: pointer;">削除</button>
+                </div>
+            `;
+            $("#output").append(h);
+        });
+
+        
+        $(document).on("click", ".delete-msg", function () {
+            const messageElement = $(this).closest(".message");
+            const key = messageElement.data("key"); 
+            const messageRef = child(dbRef, key);
+
+            remove(messageRef).then(() => {
+                messageElement.remove(); 
+                console.log("メッセージを削除しました。");
+            }).catch((error) => {
+                console.error("メッセージの削除に失敗しました:", error);
+            });
+        });
+
+        
+        $("#delete").on("click", function () {
+            remove(dbRef).then(() => {
+                $("#output").empty(); 
+                console.log("全てのメッセージを削除しました。");
+            }).catch((error) => {
+                console.error("全削除に失敗しました:", error);
+            });
+        });
+    </script>
+
+</body>
+
+</html>
